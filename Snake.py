@@ -10,15 +10,23 @@ class Snake:
         self.direction = pygame.K_RIGHT
 
     def move(self):
-        head = self.body[0]
+        head = self.body[0].pos
         if self.direction == pygame.K_UP:
-            head.pos = (head.pos[0], head.pos[1] - 1)
+            new_pos = (head[0], head[1] - 1)
         elif self.direction == pygame.K_DOWN:
-            head.pos = (head.pos[0], head.pos[1] + 1)
+            new_pos = (head[0], head[1] + 1)
         elif self.direction == pygame.K_LEFT:
-            head.pos = (head.pos[0] - 1, head.pos[1])
+            new_pos = (head[0] - 1, head[1])
         elif self.direction == pygame.K_RIGHT:
-            head.pos = (head.pos[0] + 1, head.pos[1])
+            new_pos = (head[0] + 1, head[1])
+        else:
+            return
+        self.body.insert(0, Object(self.color, new_pos))
+        self.body.pop()
+
+    def grow(self):
+        tail = self.body[-1].pos
+        self.body.append(Object(self.color, tail))
 
     def draw(self, window, size, rows):
         for part in self.body:
