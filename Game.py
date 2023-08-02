@@ -1,7 +1,9 @@
-import pygame
 import random
 
+import pygame
+
 from Object import Object
+from Position import Position
 from Snake import Snake
 
 
@@ -10,8 +12,10 @@ class Game:
         self.size = size
         self.rows = rows
         self.window = pygame.display.set_mode((size, size))
-        self.snake = Snake((0, 255, 0), (10, 10))
-        self.apple = Object((255, 0, 0), (random.randint(0, rows - 1), random.randint(0, rows - 1)))
+        self.sprite_size = size // rows  # Calculate the size of the sprites
+        self.snake = Snake("img/snake_head.png", "img/snake_body.png", Position(10, 10), self.sprite_size)
+        self.apple = Object("img/apple.png", Position(random.randint(0, rows - 1), random.randint(0, rows - 1)),
+                            self.sprite_size)
 
     def grid(self):
         distanceBtwRows = self.size // self.rows
@@ -31,32 +35,33 @@ class Game:
         self.apple.draw(self.window, self.size, self.rows)
         pygame.display.update()
 
+    def handle_events(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                exit()
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_UP and self.snake.direction != pygame.K_DOWN:
+                    self.snake.direction = event.key
+                elif event.key == pygame.K_DOWN and self.snake.direction != pygame.K_UP:
+                    self.snake.direction = event.key
+                elif event.key == pygame.K_LEFT and self.snake.direction != pygame.K_RIGHT:
+                    self.snake.direction = event.key
+                elif event.key == pygame.K_RIGHT and self.snake.direction != pygame.K_LEFT:
+                    self.snake.direction = event.key
+
+    def check_collisions(self):
+        if self.snake.collides_with_wall(self.rows):
+            print("Game Over!")
+            exit()
+        if self.snake.body[0].collides_with(self.apple):
+            self.apple.position = Position(random.randint(0, self.rows - 1),
+                                           random.randint(0, self.rows - 1))
+            self.snake.grow()
+
     def play(self):
         while True:
             pygame.time.delay(100)
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    exit()
-                elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_UP and self.snake.direction != pygame.K_DOWN:
-                        self.snake.direction = event.key
-                    elif event.key == pygame.K_DOWN and self.snake.direction != pygame.K_UP:
-                        self.snake.direction = event.key
-                    elif event.key == pygame.K_LEFT and self.snake.direction != pygame.K_RIGHT:
-                        self.snake.direction = event.key
-                    elif event.key == pygame.K_RIGHT and self.snake.direction != pygame.K_LEFT:
-                        self.snake.direction = event.key
-            self.snake.move()
-            # Verificando se a cobra colidiu com a borda da tela
-            if (self.snake.body[0].pos[0] < 0 or self.snake.body[0].pos[0] >= self.rows or
-                    self.snake.body[0].pos[1] < 0 or self.snake.body[0].pos[1] >= self.rows):
-                print("Você perdeu: Colidiu com a borda")
-                return
-            # Verificando se a cobra colidiu nela mesmo
-            if self.snake.body[0].pos in [part.pos for part in self.snake.body[1:]]:
-                print("Você perdeu: Colidiu com seu corpo")
-                return
-            if self.snake.body[0].pos == self.apple.pos:
-                self.apple.pos = (random.randint(0, self.rows - 1), random.randint(0, self.rows - 1))
-                self.snake.grow()
+            self.handle_events()
+            self.snake.move(self.rows)
+            self.check_collisions()
             self.redraw()
