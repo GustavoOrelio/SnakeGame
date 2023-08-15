@@ -42,6 +42,7 @@ class Snake:
             new_pos = Position(head.x + 1, head.y)
         else:
             return
+
         self.body.insert(0, Object(self.body_straight_sprite, new_pos, self.size))
         self.body.pop()
 
