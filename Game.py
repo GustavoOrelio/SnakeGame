@@ -13,7 +13,7 @@ class Game:
         self.rows = rows
         self.window = pygame.display.set_mode((size, size))
         self.sprite_size = size // rows  # Calculate the size of the sprites
-        self.snake = Snake("img/snake_head.png", "img/snake_body.png", Position(10, 10), self.sprite_size)
+        self.snake = Snake("img/snake_sprite.png", Position(10, 10), self.sprite_size)
         self.apple = Object("img/apple.png", Position(random.randint(0, rows - 1), random.randint(0, rows - 1)),
                             self.sprite_size)
 
