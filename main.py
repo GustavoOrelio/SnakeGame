@@ -25,29 +25,32 @@ class Object:
         return self.position.x == other.position.x and self.position.y == other.position.y
 
 
+class SnakeSegment(Object):
+    def __init__(self, sprite_input, position, size, direction):
+        super().__init__(sprite_input, position, size)
+        self.direction = direction  # direção atual deste segmento
+        self.prev_direction = direction  # direção anterior deste segmento
+
+
 class Snake:
-    def __init__(self, sprite_path, position, size):
+    def __init__(self, sprite_paths, position, size):
         self.sprite_size = size
-        self.head_sprite, self.body_sprite, self.tail_sprite = self.load_sprite(sprite_path, size)
-        self.body = [Object(self.head_sprite, position, size)]
+        self.load_sprites(sprite_paths, size)
+        self.body = [SnakeSegment(self.sprites['head'], position, size, pygame.K_RIGHT)]
         self.direction = pygame.K_RIGHT
 
-    def load_sprite(self, sprite_path, size):
-        full_sprite = pygame.image.load(sprite_path)
-
-        head = full_sprite.subsurface((0, 0, size, size))
-        head = pygame.transform.scale(head, (self.sprite_size, self.sprite_size))
-
-        body = full_sprite.subsurface((size, 0, size, size))
-        body = pygame.transform.scale(body, (self.sprite_size, self.sprite_size))
-
-        tail = full_sprite.subsurface((2 * size, 0, size, size))
-        tail = pygame.transform.scale(tail, (self.sprite_size, self.sprite_size))
-
-        return head, body, tail
+    def load_sprites(self, sprite_paths, size):
+        self.sprites = {}
+        for key, path in sprite_paths.items():
+            loaded_sprite = pygame.image.load(path)
+            self.sprites[key] = pygame.transform.scale(loaded_sprite, (self.sprite_size, self.sprite_size))
 
     def move(self, rows):
+        # Atualizar a direção anterior de todos os segmentos
+        for segment in self.body:
+            segment.prev_direction = segment.direction
         head = self.body[0].position
+        new_direction = self.direction
         if self.direction == pygame.K_UP:
             new_pos = Position(head.x, head.y - 1)
         elif self.direction == pygame.K_DOWN:
@@ -59,18 +62,55 @@ class Snake:
         else:
             return
 
-        self.body.insert(0, Object(self.head_sprite, new_pos, self.sprite_size))
+        # Cria um novo segmento de cabeça e o adiciona ao corpo
+        new_head = SnakeSegment(self.sprites['head'], new_pos, self.sprite_size, new_direction)
+        self.body.insert(0, new_head)
+
+        # Remove a cauda antiga
         self.body.pop()
-        for i in range(1, len(self.body) - 1):
-            self.body[i].sprite = self.body_sprite
 
     def grow(self):
         tail = self.body[-1].position
-        self.body.append(Object(self.tail_sprite, tail, self.sprite_size))
+        tail_direction = self.body[-1].direction
+        self.body.append(SnakeSegment(self.sprites['cauda'], tail, self.sprite_size, tail_direction))
 
     def draw(self, window, size, rows):
-        for part in self.body:
-            part.draw(window, size, rows)
+        for i in range(len(self.body)):
+            segment = self.body[i]
+            rotation_angle = 0
+
+            if segment.direction == pygame.K_UP:
+                rotation_angle = 0
+            elif segment.direction == pygame.K_DOWN:
+                rotation_angle = 180
+            elif segment.direction == pygame.K_LEFT:
+                rotation_angle = 90
+            elif segment.direction == pygame.K_RIGHT:
+                rotation_angle = -90
+
+            # Verifique se é uma curva e se o corpo tem mais de 2 segmentos.
+            if 0 < i < len(self.body) - 1 and len(self.body) > 2:
+                prev_direction = self.body[i - 1].direction
+                next_direction = self.body[i + 1].direction
+
+                if prev_direction != next_direction:
+                    # Uma curva está acontecendo.
+                    if self.direction == prev_direction:
+                        # A cobra está virando em direção a next_direct
+                        # ion.
+                        rotated_sprite = pygame.transform.rotate(self.sprites['curve_right'], rotation_angle)
+                    else:
+                        # A cobra está virando em direção a prev_direction.
+                        rotated_sprite = pygame.transform.rotate(self.sprites['curve_left'], rotation_angle)
+                else:
+                    rotated_sprite = pygame.transform.rotate(self.sprites['body'], rotation_angle)
+            elif i == 0:
+                rotated_sprite = pygame.transform.rotate(self.sprites['head'], rotation_angle)
+            else:
+                rotated_sprite = pygame.transform.rotate(self.sprites['cauda'], rotation_angle)
+
+            segment.sprite = rotated_sprite
+            segment.draw(window, size, rows)
 
     def collides_with_wall(self, rows):
         head = self.body[0].position
@@ -78,13 +118,13 @@ class Snake:
 
 
 class Game:
-    def __init__(self, size, rows):
+    def __init__(self, size, rows, sprite_paths):
         pygame.init()
         self.size = size
         self.rows = rows
         self.window = pygame.display.set_mode((size, size))
         self.sprite_size = size // rows
-        self.snake = Snake("img/sprite_snake.png", Position(10, 10), self.sprite_size)
+        self.snake = Snake(sprite_paths, Position(10, 10), self.sprite_size)
         self.apple = Object("img/apple.png", Position(random.randint(0, rows - 1), random.randint(0, rows - 1)),
                             self.sprite_size)
 
@@ -129,7 +169,7 @@ class Game:
 
     def play(self):
         while True:
-            pygame.time.delay(100)
+            pygame.time.delay(200)
             self.handle_events()
             self.snake.move(self.rows)
             self.check_collisions()
@@ -137,5 +177,12 @@ class Game:
 
 
 if __name__ == "__main__":
-    game = Game(500, 20)
+    sprite_paths = {
+        'head': 'img/snake_head.png',
+        'body': 'img/snake_body.png',
+        'cauda': 'img/snake_cauda.png',
+        'curve_left': 'img/snake_curve_left.png',
+        'curve_right': 'img/snake_curve_right.png'
+    }
+    game = Game(500, 20, sprite_paths)
     game.play()
