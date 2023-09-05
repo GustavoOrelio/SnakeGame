@@ -15,3 +15,5 @@ class Object:
 
     def collides_with(self, other):
         return self.position.x == other.position.x and self.position.y == other.position.y
+
+
